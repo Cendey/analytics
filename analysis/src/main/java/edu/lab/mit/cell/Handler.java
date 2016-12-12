@@ -96,9 +96,9 @@ public class Handler {
                     String currentErrorContent = refineErrorContents(tempError, lstUserID);
                     String errorMD5 = genContentMD5(currentErrorContent);
                     if (!markedIgnoreInfo.keySet().contains(errorMD5)) {
-                        if (!markedIgnoreInfo.values().parallelStream().filter(
+                        if (markedIgnoreInfo.values().parallelStream().filter(
                             item -> String.valueOf(item).length() > currentErrorContent.length() * 0.9
-                                && String.valueOf(item).length() < currentErrorContent.length() * 1.1).anyMatch(
+                                && String.valueOf(item).length() < currentErrorContent.length() * 1.1).noneMatch(
                             exist -> StringSimilarity.similarity(String.valueOf(exist), currentErrorContent) > 0.9)) {
                             iterator
                                 .appendContentToFile("[No." + errorCounter + "]" + error.toString() + "\r\n");
