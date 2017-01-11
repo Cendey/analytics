@@ -45,10 +45,7 @@ public class Launcher extends Application {
                     FileIterator.class.cast(handler.getIterator()).close();
                 }
                 primaryStage.hide();
-                Loader.writeInfo(controller.getIdentifier(), Loader.IGNORE_ERROR_ID_CONFIGURE);
-                controller.keepFilter();
-                Loader.writeInfo(controller.getFilter(), Loader.FILTER_CRITERION_CONFIGURE);
-                System.exit(0);
+                controller.exit();
             });
         scene.widthProperty().addListener((observable, oldValue, newValue) -> {
             double delta = newValue.doubleValue() - oldValue.doubleValue();

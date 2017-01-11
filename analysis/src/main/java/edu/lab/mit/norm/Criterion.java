@@ -67,7 +67,7 @@ public class Criterion {
         return userID;
     }
 
-    void setUserID(String userID) {
+    public void setUserID(String userID) {
         this.userID.set(userID);
     }
 

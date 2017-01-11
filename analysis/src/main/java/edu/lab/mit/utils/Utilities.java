@@ -1,7 +1,9 @@
 package edu.lab.mit.utils;
 
+import java.io.File;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.net.URL;
 
 /**
  * <p>Project: KEWILL FORWARD ENTERPRISE</p>
@@ -24,5 +26,14 @@ public class Utilities {
         } catch (NoSuchMethodException | InvocationTargetException | IllegalAccessException e) {
             System.err.println(e.getCause().getMessage());
         }
+    }
+
+    private static String getStoragePath() {
+        URL url = Thread.currentThread().getContextClassLoader().getResource("./config");
+        return url != null ? url.getPath() : new File(System.getProperty("java.io.tmpdir")).getPath();
+    }
+
+    public static String finalStorePath(String subDir){
+        return getStoragePath() + File.separator + subDir;
     }
 }

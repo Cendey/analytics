@@ -7,6 +7,7 @@ import edu.lab.mit.norm.ErrorMeta;
 import edu.lab.mit.norm.FileIterator;
 import edu.lab.mit.norm.Loader;
 import edu.lab.mit.norm.LogMeta;
+import edu.lab.mit.utils.Utilities;
 import javafx.beans.binding.Bindings;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.StringProperty;
@@ -24,6 +25,7 @@ import javafx.scene.control.Tooltip;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.stage.FileChooser;
 import org.ehcache.Cache;
+import org.ehcache.CachePersistenceException;
 import org.ehcache.PersistentCacheManager;
 import org.ehcache.config.builders.CacheConfigurationBuilder;
 import org.ehcache.config.builders.CacheManagerBuilder;
@@ -35,8 +37,6 @@ import java.io.File;
 import java.net.URL;
 import java.util.Arrays;
 import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.ResourceBundle;
 import java.util.concurrent.BlockingQueue;
 
@@ -67,88 +67,83 @@ public class Controller implements Initializable {
     public Button nextItem;
 
     private Criterion criterion;
-    private Map<String, Object> identifier = new HashMap<>();
-    private Map<String, Object> filter = new HashMap<>();
     private final static LogMeta meta = LogMeta.getInstance();
     private final ObservableList<ErrorMeta> data = FXCollections.observableArrayList();
 
     private Handler handler;
     private PersistentCacheManager cacheManager;
-    private Cache<String, String> cache;
+    private Cache<String, String> criterionCache;
+    private Cache<String, String> errorIgnoredCache;
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
         initCache();
         criterion = new Criterion();
+
         Bindings.bindBidirectional(operatorID.textProperty(), criterion.userIDProperty());
+        addTextChangeListener(operatorID, Literals.SEPARATE_MULTIPLE_OPERATOR, Literals.USER_ID);
+
         Bindings.bindBidirectional(errorStartID.textProperty(), criterion.errorStartIDProperty());
-        errorStartID.textProperty().addListener((observable, oldItem, newItem) -> {
-            if (newItem != null && !newItem.equals(oldItem)) {
-                criterion.setErrorStartID(newItem);
-            }
-        });
+        addTextChangeListener(errorStartID, Literals.ERROR_START_WITH_REGEXP, Literals.ERROR_START_ID);
+
         Bindings.bindBidirectional(errorEndID.textProperty(), criterion.errorEndIDProperty());
-        errorEndID.textProperty().addListener((
-            (observable, oldValue, newValue) -> {
-                if (newValue != null && !newValue.equals(oldValue)) {
-                    criterion.setErrorEndID(newValue);
-                }
-            }));
+        addTextChangeListener(errorEndID, Literals.ERROR_END_WITH_REGEXP, Literals.ERROR_END_ID);
 
         initTableView();
 
         initNavigationBar();
 
         Bindings.bindBidirectional(sourceErrorLog.textProperty(), criterion.sourceFilePathProperty());
-        addFileChooserListener(sourceErrorLog);
+        addFileChooserListener(sourceErrorLog, Literals.SOURCE_FILE_PATH);
 
         Bindings.bindBidirectional(targetErrorLog.textProperty(), criterion.targetFilePathProperty());
-        addFileChooserListener(targetErrorLog);
+        addFileChooserListener(targetErrorLog, Literals.TARGET_FILE_PATH);
         Loader.init(Loader.getFilters(), Loader.FILTER_CRITERION_CONFIGURE);
-        Loader.pushFilter(criterion);
+        pushFilter(criterion);
     }
 
     private void initCache() {
+        CacheConfigurationBuilder<String, String> configurationBuilder =
+            CacheConfigurationBuilder.newCacheConfigurationBuilder(String.class, String.class,
+                ResourcePoolsBuilder.newResourcePoolsBuilder()
+                    .heap(10, EntryUnit.ENTRIES)
+                    .offheap(1, MemoryUnit.MB)
+                    .disk(10, MemoryUnit.MB, true));
         cacheManager = CacheManagerBuilder.newCacheManagerBuilder()
-            .with(CacheManagerBuilder.persistence(getStoragePath() + File.separator + "cache"))
-            .withCache(
-                "threeTieredCache", CacheConfigurationBuilder.newCacheConfigurationBuilder(String.class, String.class,
-                    ResourcePoolsBuilder.newResourcePoolsBuilder()
-                        .heap(10, EntryUnit.ENTRIES)
-                        .offheap(1, MemoryUnit.MB)
-                        .disk(10, MemoryUnit.MB, true))
-            ).build(true);
-        cache = cacheManager.getCache("threeTieredCache", String.class, String.class);
+            .with(CacheManagerBuilder.persistence(Utilities.finalStorePath("overviewCache")))
+            .withCache("criterion", configurationBuilder)
+            .withCache("errorIgnored", configurationBuilder)
+            .build(true);
+        criterionCache = cacheManager.getCache("criterion", String.class, String.class);
+        errorIgnoredCache = cacheManager.getCache("errorIgnored", String.class, String.class);
     }
-
-    private String getStoragePath() {
-        URL url = Thread.currentThread().getContextClassLoader().getResource("./config");
-        return url != null ? url.getPath() : new File(System.getProperty("java.io.tmpdir")).getPath();
-    }
-
 
     private void initNavigationBar() {
         previousItem.setOnAction((ActionEvent event) -> {
-            int currentRowIndex = uniqueErrorLogInfo.getSelectionModel().getSelectedIndex();
-            if (currentRowIndex != 0) {
-                uniqueErrorLogInfo.getSelectionModel().clearSelection();
-                uniqueErrorLogInfo.getSelectionModel().select(currentRowIndex - 1);
-                uniqueErrorLogInfo.getSelectionModel().focus(currentRowIndex - 1);
-                uniqueErrorLogInfo.scrollTo(currentRowIndex - 1);
-                uniqueErrorLogInfo.refresh();
-                currentItemIndex.textProperty().set("SNo.: " + (currentRowIndex - 1));
+            if (uniqueErrorLogInfo.getItems().size() != 0) {
+                int currentRowIndex = uniqueErrorLogInfo.getSelectionModel().getSelectedIndex();
+                if (currentRowIndex != 0) {
+                    uniqueErrorLogInfo.getSelectionModel().clearSelection();
+                    uniqueErrorLogInfo.getSelectionModel().select(currentRowIndex - 1);
+                    uniqueErrorLogInfo.getSelectionModel().focus(currentRowIndex - 1);
+                    uniqueErrorLogInfo.scrollTo(currentRowIndex - 1);
+                    uniqueErrorLogInfo.refresh();
+                    currentItemIndex.textProperty().set("SNo.: " + (currentRowIndex - 1));
+                }
             }
         });
 
         nextItem.setOnAction((ActionEvent event) -> {
-            int currentRowIndex = uniqueErrorLogInfo.getSelectionModel().getSelectedIndex();
-            if (currentRowIndex < uniqueErrorLogInfo.getItems().size() - 1) {
-                uniqueErrorLogInfo.getSelectionModel().clearSelection();
-                uniqueErrorLogInfo.getSelectionModel().select(currentRowIndex + 1);
-                uniqueErrorLogInfo.getSelectionModel().focus(currentRowIndex + 1);
-                uniqueErrorLogInfo.scrollTo(currentRowIndex + 1);
-                uniqueErrorLogInfo.refresh();
-                currentItemIndex.textProperty().set("SNo.: " + (currentRowIndex + 1));
+            if (uniqueErrorLogInfo.getItems().size() != 0) {
+                int currentRowIndex = uniqueErrorLogInfo.getSelectionModel().getSelectedIndex();
+                if (currentRowIndex < uniqueErrorLogInfo.getItems().size() - 1) {
+                    uniqueErrorLogInfo.getSelectionModel().clearSelection();
+                    uniqueErrorLogInfo.getSelectionModel().select(currentRowIndex + 1);
+                    uniqueErrorLogInfo.getSelectionModel().focus(currentRowIndex + 1);
+                    uniqueErrorLogInfo.scrollTo(currentRowIndex + 1);
+                    uniqueErrorLogInfo.refresh();
+                    currentItemIndex.textProperty().set("SNo.: " + (currentRowIndex + 1));
+                }
             }
         });
     }
@@ -206,7 +201,17 @@ public class Controller implements Initializable {
         return handler;
     }
 
-    private void addFileChooserListener(TextField instance) {
+    private void addTextChangeListener(TextField instance, String toolTips, String componentId) {
+        instance.tooltipProperty().setValue(new Tooltip(toolTips));
+        instance.textProperty().addListener((observable, oldItem, newItem) -> {
+            if (newItem != null && !newItem.equals(oldItem)) {
+                instance.setText(newItem);
+                criterionCache.put(componentId, newItem);
+            }
+        });
+    }
+
+    private void addFileChooserListener(TextField instance, String componentId) {
         instance.textProperty().addListener(
             (observable, oldItem, newItem) -> {
                 instance.tooltipProperty().setValue(null);
@@ -218,13 +223,14 @@ public class Controller implements Initializable {
                     instance.tooltipProperty()
                         .setValue(new Tooltip("The file is not existed, please double check!"));
                 }
-
-            });
+                criterionCache.put(componentId, newItem.trim());
+            }
+        );
     }
 
     private String loadFilePath(String initDirectory) {
         if (initDirectory == null || initDirectory.trim().length() == 0) {
-            String defaultPath = cache.get(Literals.DEFAULT_PATH);
+            String defaultPath = criterionCache.get(Literals.DEFAULT_PATH);
             if (defaultPath != null) {
                 initDirectory = defaultPath;
             }
@@ -247,7 +253,7 @@ public class Controller implements Initializable {
         if (chosenFile != null) {
             path = chosenFile.getPath();
         }
-        cache.put(Literals.DEFAULT_PATH, path);
+        criterionCache.put(Literals.DEFAULT_PATH, path);
         return path;
     }
 
@@ -259,13 +265,13 @@ public class Controller implements Initializable {
         if (targetFile.isFile()) {
             if (targetFile.exists()) {
                 destination = targetFile.getParent();
-                cache.put(Literals.DEFAULT_PATH, destination);
+                criterionCache.put(Literals.DEFAULT_PATH, destination);
                 return destination;
             } else {
                 destination = fullFilePath.substring(0, fullFilePath.lastIndexOf("\\"));
                 File directory = new File(destination);
                 if (directory.isDirectory()) {
-                    cache.put(Literals.DEFAULT_PATH, destination);
+                    criterionCache.put(Literals.DEFAULT_PATH, destination);
                     return destination;
                 } else {
                     return initDirectory(destination);
@@ -275,7 +281,7 @@ public class Controller implements Initializable {
             destination = fullFilePath.substring(0, fullFilePath.lastIndexOf("\\"));
             File directory = new File(destination);
             if (directory.isDirectory()) {
-                cache.put(Literals.DEFAULT_PATH, destination);
+                criterionCache.put(Literals.DEFAULT_PATH, destination);
                 return destination;
             } else {
                 return initDirectory(destination);
@@ -304,8 +310,8 @@ public class Controller implements Initializable {
         new Thread(() -> {
             try {
                 prepareInfo();
-                handler = new Handler(criterion.getSourceFilePath(), criterion.getTargetFilePath());
-                BlockingQueue<ErrorMeta> queue = handler.analyzeUniqueError(criterion);
+                handler = Handler.getInstance(criterion.getSourceFilePath(), criterion.getTargetFilePath());
+                BlockingQueue<ErrorMeta> queue = handler.analyzeUniqueError(criterion, errorIgnoredCache);
                 queue.forEach(data::add);
                 errorCounter.textProperty().set("Total errors: " + queue.size());
                 if (queue.size() > 0) {
@@ -323,21 +329,8 @@ public class Controller implements Initializable {
 
     private void prepareInfo() {
         meta.clearLog();
-        identifier.clear();
         errorCounter.textProperty().set("");
         analyzeError.setDisable(true);
-        Loader.load(Loader.getIgnores(), Loader.IGNORE_ERROR_ID_CONFIGURE);
-        Loader.getIgnores().entrySet()
-            .forEach(item -> identifier.put(String.valueOf(item.getKey()), item.getValue()));
-    }
-
-    void keepFilter() {
-        filter.clear();
-        filter.put("error.start.id", criterion.getErrorStartID());
-        filter.put("error.end.id", criterion.getErrorEndID());
-        filter.put("user.id", criterion.getUserID());
-        filter.put("source.file.path", criterion.getSourceFilePath());
-        filter.put("target.file.path", criterion.getTargetFilePath());
     }
 
     private boolean criterionAlready() {
@@ -380,14 +373,6 @@ public class Controller implements Initializable {
         return true;
     }
 
-    Map<String, Object> getIdentifier() {
-        return identifier;
-    }
-
-    Map<String, Object> getFilter() {
-        return filter;
-    }
-
     private void createMessageDialog(String message) {
         Alert alert = new Alert(Alert.AlertType.WARNING);
         alert.setTitle("Warning Dialog");
@@ -399,12 +384,9 @@ public class Controller implements Initializable {
     public void ignoreError() {
         TableView.TableViewSelectionModel<ErrorMeta> model = uniqueErrorLogInfo.getSelectionModel();
         ErrorMeta currentError = model.getSelectedItem();
-        if (identifier.keySet().parallelStream().noneMatch(md5 -> md5.equals(currentError.getMd5()))) {
-            identifier.put(currentError.getMd5(), handler
-                .refineErrorContents(
-                    new StringBuilder(currentError.getDetail()),
-                    handler.operators(criterion.getUserID())));
-        }
+        errorIgnoredCache.put(currentError.getMd5(), handler.refineErrorContents(
+            new StringBuilder(currentError.getDetail()),
+            handler.operators(criterion.getUserID())));
         int index = currentError.getsNo();
         uniqueErrorLogInfo.getItems().parallelStream().filter(item -> item.getsNo() > index)
             .forEach(item -> item.setsNo(item.getsNo() - 1));
@@ -419,14 +401,26 @@ public class Controller implements Initializable {
     public void markIdentifiedErrorInfo() {
     }
 
+    private void pushFilter(Criterion criterion) {
+        if (criterionCache != null) {
+            criterion.setErrorStartID(criterionCache.get(Literals.ERROR_START_ID));
+            criterion.setErrorEndID(criterionCache.get(Literals.ERROR_END_ID));
+            criterion.setUserID(criterionCache.get(Literals.USER_ID));
+            criterion.setSourceFilePath(criterionCache.get(Literals.SOURCE_FILE_PATH));
+            criterion.setTargetFilePath(criterionCache.get(Literals.TARGET_FILE_PATH));
+        }
+    }
+
     public void exit() {
         if (handler != null) {
             FileIterator.class.cast(handler.getIterator()).close();
+            try {
+                handler.cleanUp();
+            } catch (CachePersistenceException e) {
+                System.err.println(e.getMessage());
+            }
         }
-        keepFilter();
         cacheManager.close();
-        Loader.writeInfo(identifier, Loader.IGNORE_ERROR_ID_CONFIGURE);
-        Loader.writeInfo(filter, Loader.FILTER_CRITERION_CONFIGURE);
         System.exit(0);
     }
 }

@@ -13,4 +13,13 @@ package edu.lab.mit.attributes;
 public interface Literals {
 
     String DEFAULT_PATH = "defaultPath";
+    String ERROR_START_ID = "error.start.id";
+    String ERROR_END_ID = "error.end.id";
+    String USER_ID = "user.id";
+    String SOURCE_FILE_PATH = "source.file.path";
+    String TARGET_FILE_PATH = "target.file.path";
+    String SEPARATE_MULTIPLE_OPERATOR = "Separate multiple operator with |, if necessary.";
+    String ERROR_START_WITH_REGEXP = "Support error start with regular express, such as (?i=\bERROR\b)";
+    String ERROR_END_WITH_REGEXP =
+        "Support error end with regular express, such as ^\\d{4}(?:-\\d{2}){2}\\s+\\d{2}(?::\\d{2}){2}";
 }

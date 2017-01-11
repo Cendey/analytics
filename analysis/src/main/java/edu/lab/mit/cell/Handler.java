@@ -3,8 +3,16 @@ package edu.lab.mit.cell;
 import edu.lab.mit.norm.Criterion;
 import edu.lab.mit.norm.ErrorMeta;
 import edu.lab.mit.norm.FileIterator;
-import edu.lab.mit.norm.Loader;
 import edu.lab.mit.utils.StringSimilarity;
+import edu.lab.mit.utils.Utilities;
+import org.ehcache.Cache;
+import org.ehcache.CachePersistenceException;
+import org.ehcache.PersistentCacheManager;
+import org.ehcache.config.builders.CacheConfigurationBuilder;
+import org.ehcache.config.builders.CacheManagerBuilder;
+import org.ehcache.config.builders.ResourcePoolsBuilder;
+import org.ehcache.config.units.EntryUnit;
+import org.ehcache.config.units.MemoryUnit;
 
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
@@ -14,11 +22,8 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.GregorianCalendar;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
-import java.util.Properties;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.regex.Matcher;
@@ -41,17 +46,43 @@ public class Handler {
         "^((((1[6-9]|[2-9]\\d)\\d{2})-(0?[13578]|1[02])-(0?[1-9]|[12]\\d|3[01]))|(((1[6-9]|[2-9]\\d)\\d{2})-(0?[13456789]|1[012])-(0?[1-9]|[12]\\d|30))|(((1[6-9]|[2-9]\\d)\\d{2})-0?2-(0?[1-9]|1\\d|2[0-8]))|(((1[6-9]|[2-9]\\d)(0[48]|[2468][048]|[13579][26])|((16|[2468][048]|[3579][26])00))-0?2-29-)) (20|21|22|23|[0-1]?\\d):[0-5]?\\d:[0-5]?\\d",
         Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
 
+    private static Handler instance;
+    private PersistentCacheManager cacheManager;
+    private Cache<String, String> identifiedErrorCache;
+
+    public static Handler getInstance(String from, String to) throws Exception {
+        if (instance == null) {
+            instance = new Handler(from, to);
+        }
+        return instance;
+    }
+
     @SuppressWarnings(value = {"UnusedDeclaration"})
-    public Handler(String fromFilePath, String toFilePath) throws Exception {
+    private Handler(String fromFilePath, String toFilePath) throws Exception {
         super();
+        initCache();
         iterator = new FileIterator(fromFilePath, toFilePath);
+    }
+
+    private void initCache() {
+        cacheManager = CacheManagerBuilder.newCacheManagerBuilder()
+            .with(CacheManagerBuilder.persistence(Utilities.finalStorePath("identifiedErrorCache")))
+            .withCache(
+                "identifiedError", CacheConfigurationBuilder.newCacheConfigurationBuilder(String.class, String.class,
+                    ResourcePoolsBuilder.newResourcePoolsBuilder()
+                        .heap(10, EntryUnit.ENTRIES)
+                        .offheap(1, MemoryUnit.MB)
+                        .disk(10, MemoryUnit.MB, true))
+            ).build(true);
+        identifiedErrorCache = cacheManager.getCache("identifiedError", String.class, String.class);
+        identifiedErrorCache.clear();
     }
 
     public Iterator<String> getIterator() {
         return iterator;
     }
 
-    public BlockingQueue<ErrorMeta> analyzeUniqueError(Criterion instance) {
+    public BlockingQueue<ErrorMeta> analyzeUniqueError(Criterion instance, Cache<String, String> ignoredErrorCache) {
         Boolean errorOccurred = false;
         Boolean successiveError = false;
         Boolean newErrorFollowed = false;
@@ -59,10 +90,6 @@ public class Handler {
         StringBuilder tempError = new StringBuilder();
         List<String> lstUserID = operators(instance.getUserID());
         BlockingQueue<ErrorMeta> uniqueErrorLogQueue = new LinkedBlockingQueue<>();
-        Properties ignoredIdentifies = pullCachedIdentifiedErrors();
-        Map<String, Object> markedIgnoreInfo = new HashMap<>(ignoredIdentifies.size());
-        ignoredIdentifies.entrySet().parallelStream()
-            .forEach(item -> markedIgnoreInfo.put(String.valueOf(item.getKey()), item.getValue()));
         String currDate = null;
         int errorCounter = 0;
         iterator.appendContentToFile(
@@ -97,16 +124,15 @@ public class Handler {
                 if (errorOccurred && !successiveError) {
                     String currentErrorContent = refineErrorContents(tempError, lstUserID);
                     String errorMD5 = genContentMD5(currentErrorContent);
-                    if (!markedIgnoreInfo.keySet().contains(errorMD5)) {
-                        if (markedIgnoreInfo.values().parallelStream().filter(
-                            item -> String.valueOf(item).length() > currentErrorContent.length() * 0.9
-                                && String.valueOf(item).length() < currentErrorContent.length() * 1.1).noneMatch(
-                            exist -> StringSimilarity.similarity(String.valueOf(exist), currentErrorContent) > 0.9)) {
+                    if (ignoredErrorCache.get(errorMD5) == null) {
+                        boolean ignoredMatched = isMismatched(ignoredErrorCache, currentErrorContent);
+                        boolean identifiedMatched = isMismatched(identifiedErrorCache, currentErrorContent);
+                        if (!ignoredMatched && !identifiedMatched) {
                             iterator
                                 .appendContentToFile("[No." + errorCounter + "]" + error.toString() + "\r\n");
                             uniqueErrorLogQueue
                                 .add(new ErrorMeta(errorCounter, currDate, errorMD5, error.toString()));
-                            markedIgnoreInfo.put(errorMD5, currentErrorContent);
+                            identifiedErrorCache.put(errorMD5, refineErrorContents(tempError, lstUserID));
                             errorCounter++;
                         }
                     }
@@ -129,18 +155,26 @@ public class Handler {
         return uniqueErrorLogQueue;
     }
 
+    private boolean isMismatched(Cache<String, String> ignoredErrorCache, String currentErrorContent) {
+        boolean noneIgnoredMatched = false;
+        Iterator<Cache.Entry<String, String>> errorIterator = ignoredErrorCache.iterator();
+        while (!noneIgnoredMatched && errorIterator.hasNext()) {
+            Cache.Entry<String, String> entry = errorIterator.next();
+            noneIgnoredMatched = entry.getValue().length() > currentErrorContent.length() * 0.9
+                && entry.getValue().length() < currentErrorContent.length() * 1.1
+                && StringSimilarity.similarity(entry.getValue(), currentErrorContent) > 0.9;
+        }
+        return noneIgnoredMatched;
+    }
+
     public String refineErrorContents(StringBuilder tempError, List<String> lstUserID) {
         final String[] temp = {tempError.toString()};
         if (lstUserID != null && lstUserID.size() > 0) {
             lstUserID.stream().filter(temp[0]::contains)
-                .mapToInt(id -> temp[0].indexOf(id) + id.length() + 1).min()
+                .mapToInt(id -> temp[0].indexOf(id) + id.length()).min()
                 .ifPresent(pos -> temp[0] = temp[0].substring(pos));
         }
         return temp[0];
-    }
-
-    private Properties pullCachedIdentifiedErrors() {
-        return Loader.getIgnores();
     }
 
     private String genContentMD5(String content) {
@@ -164,5 +198,10 @@ public class Handler {
             Arrays.stream(operators.split("\\|")).forEach(item -> finalLstOperator.add("[" + item + "]"));
         }
         return lstOperator;
+    }
+
+    public void cleanUp() throws CachePersistenceException {
+        cacheManager.close();
+        cacheManager.destroy();
     }
 }

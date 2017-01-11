@@ -1,5 +1,7 @@
 package edu.lab.mit.norm;
 
+import edu.lab.mit.attributes.Literals;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -88,11 +90,11 @@ public class Loader {
 
     public static void pushFilter(Criterion criterion) {
         if (filters.size() > 0) {
-            criterion.setErrorStartID((String) filters.get("error.start.id"));
-            criterion.setErrorEndID((String) filters.get("error.end.id"));
-            criterion.setUserID((String) filters.get("user.id"));
-            criterion.setSourceFilePath((String) filters.get("source.file.path"));
-            criterion.setTargetFilePath((String) filters.get("target.file.path"));
+            criterion.setErrorStartID((String) filters.get(Literals.ERROR_START_ID));
+            criterion.setErrorEndID((String) filters.get(Literals.ERROR_END_ID));
+            criterion.setUserID((String) filters.get(Literals.USER_ID));
+            criterion.setSourceFilePath((String) filters.get(Literals.SOURCE_FILE_PATH));
+            criterion.setTargetFilePath((String) filters.get(Literals.TARGET_FILE_PATH));
         }
     }
 
