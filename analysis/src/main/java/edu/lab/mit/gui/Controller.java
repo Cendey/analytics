@@ -110,7 +110,7 @@ public class Controller implements Initializable {
 
     private void initCache() {
         cacheManager = CacheManagerBuilder.newCacheManagerBuilder()
-            .with(CacheManagerBuilder.persistence(getStoragePath() + File.separator + "analysis-config"))
+            .with(CacheManagerBuilder.persistence(getStoragePath() + File.separator + "cache"))
             .withCache(
                 "threeTieredCache", CacheConfigurationBuilder.newCacheConfigurationBuilder(String.class, String.class,
                     ResourcePoolsBuilder.newResourcePoolsBuilder()
