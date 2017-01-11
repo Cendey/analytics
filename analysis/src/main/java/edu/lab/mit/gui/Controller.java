@@ -1,5 +1,6 @@
 package edu.lab.mit.gui;
 
+import edu.lab.mit.attributes.Literals;
 import edu.lab.mit.cell.Handler;
 import edu.lab.mit.norm.Criterion;
 import edu.lab.mit.norm.ErrorMeta;
@@ -22,6 +23,13 @@ import javafx.scene.control.TextField;
 import javafx.scene.control.Tooltip;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.stage.FileChooser;
+import org.ehcache.Cache;
+import org.ehcache.PersistentCacheManager;
+import org.ehcache.config.builders.CacheConfigurationBuilder;
+import org.ehcache.config.builders.CacheManagerBuilder;
+import org.ehcache.config.builders.ResourcePoolsBuilder;
+import org.ehcache.config.units.EntryUnit;
+import org.ehcache.config.units.MemoryUnit;
 
 import java.io.File;
 import java.net.URL;
@@ -65,9 +73,12 @@ public class Controller implements Initializable {
     private final ObservableList<ErrorMeta> data = FXCollections.observableArrayList();
 
     private Handler handler;
+    private PersistentCacheManager cacheManager;
+    private Cache<String, String> cache;
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
+        initCache();
         criterion = new Criterion();
         Bindings.bindBidirectional(operatorID.textProperty(), criterion.userIDProperty());
         Bindings.bindBidirectional(errorStartID.textProperty(), criterion.errorStartIDProperty());
@@ -96,6 +107,25 @@ public class Controller implements Initializable {
         Loader.init(Loader.getFilters(), Loader.FILTER_CRITERION_CONFIGURE);
         Loader.pushFilter(criterion);
     }
+
+    private void initCache() {
+        cacheManager = CacheManagerBuilder.newCacheManagerBuilder()
+            .with(CacheManagerBuilder.persistence(getStoragePath() + File.separator + "analysis-config"))
+            .withCache(
+                "threeTieredCache", CacheConfigurationBuilder.newCacheConfigurationBuilder(String.class, String.class,
+                    ResourcePoolsBuilder.newResourcePoolsBuilder()
+                        .heap(10, EntryUnit.ENTRIES)
+                        .offheap(1, MemoryUnit.MB)
+                        .disk(10, MemoryUnit.MB, true))
+            ).build(true);
+        cache = cacheManager.getCache("threeTieredCache", String.class, String.class);
+    }
+
+    private String getStoragePath() {
+        URL url = Thread.currentThread().getContextClassLoader().getResource("./config");
+        return url != null ? url.getPath() : new File(System.getProperty("java.io.tmpdir")).getPath();
+    }
+
 
     private void initNavigationBar() {
         previousItem.setOnAction((ActionEvent event) -> {
@@ -193,6 +223,12 @@ public class Controller implements Initializable {
     }
 
     private String loadFilePath(String initDirectory) {
+        if (initDirectory == null || initDirectory.trim().length() == 0) {
+            String defaultPath = cache.get(Literals.DEFAULT_PATH);
+            if (defaultPath != null) {
+                initDirectory = defaultPath;
+            }
+        }
         FileChooser fileChooser = new FileChooser();
         fileChooser.setTitle("Open Resource File");
         fileChooser.getExtensionFilters().addAll(
@@ -211,6 +247,7 @@ public class Controller implements Initializable {
         if (chosenFile != null) {
             path = chosenFile.getPath();
         }
+        cache.put(Literals.DEFAULT_PATH, path);
         return path;
     }
 
@@ -222,11 +259,13 @@ public class Controller implements Initializable {
         if (targetFile.isFile()) {
             if (targetFile.exists()) {
                 destination = targetFile.getParent();
+                cache.put(Literals.DEFAULT_PATH, destination);
                 return destination;
             } else {
                 destination = fullFilePath.substring(0, fullFilePath.lastIndexOf("\\"));
                 File directory = new File(destination);
                 if (directory.isDirectory()) {
+                    cache.put(Literals.DEFAULT_PATH, destination);
                     return destination;
                 } else {
                     return initDirectory(destination);
@@ -236,6 +275,7 @@ public class Controller implements Initializable {
             destination = fullFilePath.substring(0, fullFilePath.lastIndexOf("\\"));
             File directory = new File(destination);
             if (directory.isDirectory()) {
+                cache.put(Literals.DEFAULT_PATH, destination);
                 return destination;
             } else {
                 return initDirectory(destination);
@@ -287,7 +327,7 @@ public class Controller implements Initializable {
         errorCounter.textProperty().set("");
         analyzeError.setDisable(true);
         Loader.load(Loader.getIgnores(), Loader.IGNORE_ERROR_ID_CONFIGURE);
-        Loader.getIgnores().entrySet().stream()
+        Loader.getIgnores().entrySet()
             .forEach(item -> identifier.put(String.valueOf(item.getKey()), item.getValue()));
     }
 
@@ -359,7 +399,7 @@ public class Controller implements Initializable {
     public void ignoreError() {
         TableView.TableViewSelectionModel<ErrorMeta> model = uniqueErrorLogInfo.getSelectionModel();
         ErrorMeta currentError = model.getSelectedItem();
-        if (!identifier.keySet().parallelStream().anyMatch(md5 -> md5.equals(currentError.getMd5()))) {
+        if (identifier.keySet().parallelStream().noneMatch(md5 -> md5.equals(currentError.getMd5()))) {
             identifier.put(currentError.getMd5(), handler
                 .refineErrorContents(
                     new StringBuilder(currentError.getDetail()),
@@ -384,6 +424,7 @@ public class Controller implements Initializable {
             FileIterator.class.cast(handler.getIterator()).close();
         }
         keepFilter();
+        cacheManager.close();
         Loader.writeInfo(identifier, Loader.IGNORE_ERROR_ID_CONFIGURE);
         Loader.writeInfo(filter, Loader.FILTER_CRITERION_CONFIGURE);
         System.exit(0);
