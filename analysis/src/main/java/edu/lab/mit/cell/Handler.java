@@ -21,6 +21,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
@@ -68,18 +69,19 @@ public class Handler {
             "\r\n##############################" + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
                 .format(GregorianCalendar.getInstance().getTime())
                 + "##############################\r\n");
+        Pattern errorPattern = Pattern.compile(instance.getErrorStartID(), Pattern.CASE_INSENSITIVE);
         while (iterator.hasNext()) {
             String content = iterator.next();
             if (content != null && content.trim().length() != 0) {
-                if (content.contains(instance.getErrorStartID()) && (
-                    lstUserID == null || lstUserID.stream().anyMatch(content::contains))) {
+                Matcher matcher = errorPattern.matcher(content);
+                if (matcher.find() && (lstUserID == null || lstUserID.stream().anyMatch(content::contains))) {
                     errorOccurred = true;
                     if (!successiveError) {
                         successiveError = true;
                         newErrorFollowed = false;
                         error.append(content).append("\r\n");
-                        tempError.append(content.substring(instance.getErrorEndID().length() + 1));
-                        currDate = content.substring(0, content.indexOf(instance.getErrorStartID()));
+                        tempError.append(content.substring(matcher.end()));
+                        currDate = content.substring(0, matcher.end()).trim();
                     } else {
                         successiveError = false;
                         newErrorFollowed = true;
@@ -116,8 +118,8 @@ public class Handler {
                         newErrorFollowed = false;
                         successiveError = true;
                         error.append(content).append("\r\n");
-                        tempError.append(content.substring(instance.getErrorEndID().length() + 1));
-                        currDate = content.substring(0, content.indexOf(instance.getErrorStartID()));
+                        tempError.append(content.substring(matcher.end()));
+                        currDate = content.substring(0, matcher.end()).trim();
                     }
                 }
             }
