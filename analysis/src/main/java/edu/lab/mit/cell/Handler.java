@@ -6,6 +6,7 @@ import edu.lab.mit.norm.FileIterator;
 import edu.lab.mit.utils.StringSimilarity;
 import edu.lab.mit.utils.Utilities;
 import org.ehcache.Cache;
+import org.ehcache.CacheManager;
 import org.ehcache.CachePersistenceException;
 import org.ehcache.PersistentCacheManager;
 import org.ehcache.config.builders.CacheConfigurationBuilder;
@@ -47,7 +48,7 @@ public class Handler {
         Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
 
     private static Handler instance;
-    private PersistentCacheManager cacheManager;
+    private CacheManager cacheManager;
     private Cache<String, String> identifiedErrorCache;
 
     public static Handler getInstance(String from, String to) throws Exception {
@@ -66,13 +67,9 @@ public class Handler {
 
     private void initCache() {
         cacheManager = CacheManagerBuilder.newCacheManagerBuilder()
-            .with(CacheManagerBuilder.persistence(Utilities.finalStorePath("identifiedErrorCache")))
             .withCache(
                 "identifiedError", CacheConfigurationBuilder.newCacheConfigurationBuilder(String.class, String.class,
-                    ResourcePoolsBuilder.newResourcePoolsBuilder()
-                        .heap(10, EntryUnit.ENTRIES)
-                        .offheap(1, MemoryUnit.MB)
-                        .disk(10, MemoryUnit.MB, true))
+                    ResourcePoolsBuilder.heap(100)).build()
             ).build(true);
         identifiedErrorCache = cacheManager.getCache("identifiedError", String.class, String.class);
         identifiedErrorCache.clear();
@@ -200,8 +197,7 @@ public class Handler {
         return lstOperator;
     }
 
-    public void cleanUp() throws CachePersistenceException {
+    public void cleanUp() {
         cacheManager.close();
-        cacheManager.destroy();
     }
 }

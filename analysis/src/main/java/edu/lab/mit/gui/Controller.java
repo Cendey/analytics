@@ -414,11 +414,7 @@ public class Controller implements Initializable {
     public void exit() {
         if (handler != null) {
             FileIterator.class.cast(handler.getIterator()).close();
-            try {
-                handler.cleanUp();
-            } catch (CachePersistenceException e) {
-                System.err.println(e.getMessage());
-            }
+            handler.cleanUp();
         }
         cacheManager.close();
         System.exit(0);
