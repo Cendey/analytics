@@ -88,10 +88,11 @@ public class Handler {
         error = new StringBuilder();
         tempError = new StringBuilder();
         lstUserID = operators(instance.getUserID());
+        iterator.cleanBuffer();
         iterator.appendContentToFile(
             String.format(
                 "\r\n############################## [%s] ##############################\r\n",
-                new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(GregorianCalendar.getInstance().getTime())));
+                new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(GregorianCalendar.getInstance().getTime())), false);
     }
 
     public BlockingQueue<ErrorMeta> analyzeUniqueError(Criterion instance, Cache<String, String> ignoredErrorCache) {
@@ -120,7 +121,7 @@ public class Handler {
                 }
             }
         }
-        iterator.appendContentToFile("Found " + errorCounter + " errors!");
+        iterator.appendContentToFile("Found " + errorCounter + " errors!", true);
         return uniqueErrorLogQueue;
     }
 
@@ -129,7 +130,7 @@ public class Handler {
         String errorMD5 = genContentMD5(contents);
         if (ignoredIdCache.get(errorMD5) == null && identifiedIdCache.get(errorMD5) == null) {
             if (!mismatched(ignoredIdCache, contents) && !mismatched(identifiedIdCache, contents)) {
-                iterator.appendContentToFile("[No." + errorCounter + "]" + error.toString() + "\r\n");
+                iterator.appendContentToFile("[No." + errorCounter + "]" + error.toString() + "\r\n", false);
                 uniqueErrorLogQueue.add(new ErrorMeta(errorCounter, currDate, errorMD5, error.toString()));
                 identifiedIdCache.put(errorMD5, refineErrorContents(tempError, lstUserID));
                 errorCounter++;

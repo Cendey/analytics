@@ -24,9 +24,11 @@ import java.util.NoSuchElementException;
  */
 public class FileIterator implements Iterator<String> {
 
+    private final static long BUFFER_SIZE = (2 << 12);
     private String currentLine;
     private BufferedReader reader;
     private BufferedWriter writer;
+    private StringBuilder buffer;
 
     public FileIterator(String toReadFilePath, String toWriteFilePath)
         throws FileNotFoundException, UnsupportedEncodingException {
@@ -35,6 +37,7 @@ public class FileIterator implements Iterator<String> {
 
     public void build(String toReadFilePath, String toWriteFilePath)
         throws UnsupportedEncodingException, FileNotFoundException {
+        buffer = new StringBuilder();
         reader = new BufferedReader(new InputStreamReader(new FileInputStream(toReadFilePath), "UTF-8"));
         writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(toWriteFilePath, true), "UTF-8"));
     }
@@ -67,13 +70,24 @@ public class FileIterator implements Iterator<String> {
         }
     }
 
-    public void appendContentToFile(String content) {
+    public void appendContentToFile(String content, Boolean complete) {
         try {
-            writer.write(content);
-            writer.flush();
+            if (complete || doesWrite(content)) {
+                buffer.append(content);
+                writer.write(buffer.toString());
+                writer.flush();
+                buffer.delete(0, buffer.length());
+            } else {
+                buffer.append(content);
+            }
         } catch (IOException e) {
             System.out.println(e.getMessage());
         }
+    }
+
+    private boolean doesWrite(String content) throws UnsupportedEncodingException {
+        int bytes = String.valueOf(buffer.toString()).getBytes("UTF-8").length;
+        return bytes < BUFFER_SIZE && bytes + content.getBytes("UTF-8").length >= BUFFER_SIZE;
     }
 
     @Override
@@ -98,5 +112,9 @@ public class FileIterator implements Iterator<String> {
 
     @Override
     public void remove() {
+    }
+
+    public void cleanBuffer() {
+        buffer.delete(0, buffer.length());
     }
 }
