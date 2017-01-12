@@ -165,13 +165,13 @@ public class Handler {
     }
 
     public String refineErrorContents(StringBuilder tempError, List<String> lstUserID) {
-        final String[] temp = {tempError.toString()};
+        StringBuilder result = new StringBuilder();
         if (lstUserID != null && lstUserID.size() > 0) {
-            lstUserID.stream().filter(temp[0]::contains)
-                .mapToInt(id -> temp[0].indexOf(id) + id.length()).min()
-                .ifPresent(pos -> temp[0] = temp[0].substring(pos));
+            lstUserID.stream().filter(id->tempError.indexOf(id) != -1)
+                .mapToInt(id -> tempError.indexOf(id) + id.length()).min()
+                .ifPresent(pos -> result.append(tempError.substring(pos)));
         }
-        return temp[0];
+        return result.toString();
     }
 
     private String genContentMD5(String content) {
