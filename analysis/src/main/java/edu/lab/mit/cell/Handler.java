@@ -4,16 +4,11 @@ import edu.lab.mit.norm.Criterion;
 import edu.lab.mit.norm.ErrorMeta;
 import edu.lab.mit.norm.FileIterator;
 import edu.lab.mit.utils.StringSimilarity;
-import edu.lab.mit.utils.Utilities;
 import org.ehcache.Cache;
 import org.ehcache.CacheManager;
-import org.ehcache.CachePersistenceException;
-import org.ehcache.PersistentCacheManager;
 import org.ehcache.config.builders.CacheConfigurationBuilder;
 import org.ehcache.config.builders.CacheManagerBuilder;
 import org.ehcache.config.builders.ResourcePoolsBuilder;
-import org.ehcache.config.units.EntryUnit;
-import org.ehcache.config.units.MemoryUnit;
 
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
@@ -72,7 +67,6 @@ public class Handler {
                     ResourcePoolsBuilder.heap(100)).build()
             ).build(true);
         identifiedErrorCache = cacheManager.getCache("identifiedError", String.class, String.class);
-        identifiedErrorCache.clear();
     }
 
     public Iterator<String> getIterator() {

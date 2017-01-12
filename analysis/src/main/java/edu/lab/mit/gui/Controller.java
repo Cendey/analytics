@@ -25,7 +25,6 @@ import javafx.scene.control.Tooltip;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.stage.FileChooser;
 import org.ehcache.Cache;
-import org.ehcache.CachePersistenceException;
 import org.ehcache.PersistentCacheManager;
 import org.ehcache.config.builders.CacheConfigurationBuilder;
 import org.ehcache.config.builders.CacheManagerBuilder;
@@ -110,7 +109,7 @@ public class Controller implements Initializable {
                     .offheap(1, MemoryUnit.MB)
                     .disk(10, MemoryUnit.MB, true));
         cacheManager = CacheManagerBuilder.newCacheManagerBuilder()
-            .with(CacheManagerBuilder.persistence(Utilities.finalStorePath("overviewCache")))
+            .with(CacheManagerBuilder.persistence(Utilities.finalStorePath("caches")))
             .withCache("criterion", configurationBuilder)
             .withCache("errorIgnored", configurationBuilder)
             .build(true);
@@ -214,16 +213,18 @@ public class Controller implements Initializable {
     private void addFileChooserListener(TextField instance, String componentId) {
         instance.textProperty().addListener(
             (observable, oldItem, newItem) -> {
-                instance.tooltipProperty().setValue(null);
-                instance.setStyle("-fx-text-fill: BLACK");
+                if (newItem != null) {
+                    instance.tooltipProperty().setValue(null);
+                    instance.setStyle("-fx-text-fill: BLACK");
 
-                File file = new File(newItem.trim());
-                if (!file.isFile() || !file.exists()) {
-                    instance.setStyle("-fx-text-fill: RED");
-                    instance.tooltipProperty()
-                        .setValue(new Tooltip("The file is not existed, please double check!"));
+                    File file = new File(newItem.trim());
+                    if (!file.isFile() || !file.exists()) {
+                        instance.setStyle("-fx-text-fill: RED");
+                        instance.tooltipProperty()
+                            .setValue(new Tooltip("The file is not existed, please double check!"));
+                    }
+                    criterionCache.put(componentId, newItem.trim());
                 }
-                criterionCache.put(componentId, newItem.trim());
             }
         );
     }
