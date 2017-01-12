@@ -1,8 +1,5 @@
 package edu.lab.mit.gui;
 
-import edu.lab.mit.cell.Handler;
-import edu.lab.mit.norm.FileIterator;
-import edu.lab.mit.norm.Loader;
 import edu.lab.mit.utils.Utilities;
 import javafx.application.Application;
 import javafx.collections.ObservableList;
@@ -40,10 +37,6 @@ public class Launcher extends Application {
         scene.getStylesheets().add("/config/styles.css");
         primaryStage.setOnCloseRequest(
             windowEvent -> {
-                Handler handler = controller.getHandler();
-                if (handler != null) {
-                    FileIterator.class.cast(handler.getIterator()).close();
-                }
                 primaryStage.hide();
                 controller.exit();
             });

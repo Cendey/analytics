@@ -54,7 +54,7 @@ public class Handler {
     private StringBuilder error;
     private StringBuilder tempError;
     private CacheManager cacheManager;
-    private Cache<String, String> identifiedErrorCache;
+    private Cache<String, String> identifiedIdCache;
 
     public static Handler getInstance(String from, String to) throws Exception {
         if (instance == null) {
@@ -77,11 +77,7 @@ public class Handler {
                 "identifiedError", CacheConfigurationBuilder.newCacheConfigurationBuilder(String.class, String.class,
                     ResourcePoolsBuilder.heap(100)).build()
             ).build(true);
-        identifiedErrorCache = cacheManager.getCache("identifiedError", String.class, String.class);
-    }
-
-    public Iterator<String> getIterator() {
-        return iterator;
+        identifiedIdCache = cacheManager.getCache("identifiedError", String.class, String.class);
     }
 
     private void resetInfo(Criterion instance) {
@@ -92,9 +88,9 @@ public class Handler {
         tempError = new StringBuilder();
         lstUserID = operators(instance.getUserID());
         iterator.appendContentToFile(
-            "\r\n##############################" + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
-                .format(GregorianCalendar.getInstance().getTime())
-                + "##############################\r\n");
+            String.format(
+                "\r\n############################## [%s] ##############################\r\n",
+                new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(GregorianCalendar.getInstance().getTime())));
     }
 
     public BlockingQueue<ErrorMeta> analyzeUniqueError(Criterion instance, Cache<String, String> ignoredErrorCache) {
@@ -127,25 +123,22 @@ public class Handler {
         return uniqueErrorLogQueue;
     }
 
-    private void filterError(Cache<String, String> ignoredErrorCache, BlockingQueue<ErrorMeta> uniqueErrorLogQueue) {
-        String currentErrorContent = refineErrorContents(tempError, lstUserID);
-        String errorMD5 = genContentMD5(currentErrorContent);
-        if (ignoredErrorCache.get(errorMD5) == null) {
-            boolean ignoredMatched = isMismatched(ignoredErrorCache, currentErrorContent);
-            boolean identifiedMatched = isMismatched(identifiedErrorCache, currentErrorContent);
-            if (!ignoredMatched && !identifiedMatched) {
-                iterator
-                    .appendContentToFile("[No." + errorCounter + "]" + error.toString() + "\r\n");
-                uniqueErrorLogQueue
-                    .add(new ErrorMeta(errorCounter, currDate, errorMD5, error.toString()));
-                identifiedErrorCache.put(errorMD5, refineErrorContents(tempError, lstUserID));
+    private void filterError(Cache<String, String> ignoredIdCache, BlockingQueue<ErrorMeta> uniqueErrorLogQueue) {
+        String contents = refineErrorContents(tempError, lstUserID);
+        String errorMD5 = genContentMD5(contents);
+        if (ignoredIdCache.get(errorMD5) == null) {
+            if (!mismatched(ignoredIdCache, contents) && !mismatched(identifiedIdCache, contents)) {
+                iterator.appendContentToFile("[No." + errorCounter + "]" + error.toString() + "\r\n");
+                uniqueErrorLogQueue.add(new ErrorMeta(errorCounter, currDate, errorMD5, error.toString()));
+                identifiedIdCache.put(errorMD5, refineErrorContents(tempError, lstUserID));
                 errorCounter++;
             }
         }
     }
 
     private void appendError(Matcher startMatcher, Matcher endMatcher, String content) {
-        if (startMatcher.find(0) && (lstUserID == null || lstUserID.stream().anyMatch(content::contains))) {
+        if (startMatcher.find(0) && (
+            !lstUserID.stream().findAny().isPresent() || lstUserID.stream().anyMatch(content::contains))) {
             errorOccurred = true;
             error.append(content).append("\r\n");
             tempError.append(content.substring(startMatcher.end()));
@@ -158,15 +151,15 @@ public class Handler {
         }
     }
 
-    private boolean isMismatched(Cache<String, String> errorCache, String currentErrorContent) {
+    private boolean mismatched(Cache<String, String> errorCache, String currents) {
         boolean matched = false;
         StandardDeviation sd = new StandardDeviation(false);
         Iterator<Cache.Entry<String, String>> errorIterator = errorCache.iterator();
         while (!matched && errorIterator.hasNext()) {
             Cache.Entry<String, String> entry = errorIterator.next();
-            double[] lengths = {entry.getValue().length(), currentErrorContent.length()};
+            double[] lengths = {entry.getValue().length(), currents.length()};
             matched = sd.evaluate(lengths) / entry.getValue().length() < 0.1
-                && StringSimilarity.similarity(entry.getValue(), currentErrorContent) > 0.8;
+                && StringSimilarity.similarity(entry.getValue(), currents) > 0.8;
         }
         return matched;
     }
@@ -195,17 +188,16 @@ public class Handler {
     }
 
     public List<String> operators(String operators) {
-        List<String> lstOperator = null;
+        List<String> lstOperator = new ArrayList<>();
         if (StringUtils.isNotEmpty(operators)) {
-            lstOperator = new ArrayList<>();
-            final List<String> finalLstOperator = lstOperator;
-            Arrays.stream(operators.split("\\|")).forEach(item -> finalLstOperator.add("[" + item + "]"));
+            Arrays.stream(operators.split("\\|")).forEach(item -> lstOperator.add("[" + item + "]"));
         }
         return lstOperator;
     }
 
     public void cleanUp() {
         iterator.close();
+        identifiedIdCache.clear();
         cacheManager.close();
     }
 }

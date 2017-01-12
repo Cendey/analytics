@@ -4,7 +4,6 @@ import edu.lab.mit.attributes.Literals;
 import edu.lab.mit.cell.Handler;
 import edu.lab.mit.norm.Criterion;
 import edu.lab.mit.norm.ErrorMeta;
-import edu.lab.mit.norm.FileIterator;
 import edu.lab.mit.norm.Loader;
 import edu.lab.mit.norm.LogMeta;
 import edu.lab.mit.utils.Utilities;
@@ -194,10 +193,6 @@ public class Controller implements Initializable {
             }
         }
         return available;
-    }
-
-    Handler getHandler() {
-        return handler;
     }
 
     private void addTextChangeListener(TextField instance, String toolTips, String componentId) {
@@ -414,7 +409,6 @@ public class Controller implements Initializable {
 
     public void exit() {
         if (handler != null) {
-            FileIterator.class.cast(handler.getIterator()).close();
             handler.cleanUp();
         }
         cacheManager.close();
