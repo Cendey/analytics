@@ -4,7 +4,6 @@ import edu.lab.mit.attributes.Literals;
 import edu.lab.mit.cell.Handler;
 import edu.lab.mit.norm.Criterion;
 import edu.lab.mit.norm.ErrorMeta;
-import edu.lab.mit.norm.Loader;
 import edu.lab.mit.norm.LogMeta;
 import edu.lab.mit.utils.Utilities;
 import javafx.beans.binding.Bindings;
@@ -96,7 +95,6 @@ public class Controller implements Initializable {
 
         Bindings.bindBidirectional(targetErrorLog.textProperty(), criterion.targetFilePathProperty());
         addFileChooserListener(targetErrorLog, Literals.TARGET_FILE_PATH);
-        Loader.init(Loader.getFilters(), Loader.FILTER_CRITERION_CONFIGURE);
         pushFilter(criterion);
     }
 

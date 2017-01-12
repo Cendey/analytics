@@ -126,7 +126,7 @@ public class Handler {
     private void filterError(Cache<String, String> ignoredIdCache, BlockingQueue<ErrorMeta> uniqueErrorLogQueue) {
         String contents = refineErrorContents(tempError, lstUserID);
         String errorMD5 = genContentMD5(contents);
-        if (ignoredIdCache.get(errorMD5) == null) {
+        if (ignoredIdCache.get(errorMD5) == null && identifiedIdCache.get(errorMD5) == null) {
             if (!mismatched(ignoredIdCache, contents) && !mismatched(identifiedIdCache, contents)) {
                 iterator.appendContentToFile("[No." + errorCounter + "]" + error.toString() + "\r\n");
                 uniqueErrorLogQueue.add(new ErrorMeta(errorCounter, currDate, errorMD5, error.toString()));
