@@ -84,22 +84,22 @@ public class Handler {
         return iterator;
     }
 
-    private void resetInfo() {
+    private void resetInfo(Criterion instance) {
         errorCounter = 0;
         errorOccurred = false;
         currDate = null;
         error = new StringBuilder();
         tempError = new StringBuilder();
-    }
-
-    public BlockingQueue<ErrorMeta> analyzeUniqueError(Criterion instance, Cache<String, String> ignoredErrorCache) {
-        resetInfo();
         lstUserID = operators(instance.getUserID());
-        BlockingQueue<ErrorMeta> uniqueErrorLogQueue = new LinkedBlockingQueue<>();
         iterator.appendContentToFile(
             "\r\n##############################" + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
                 .format(GregorianCalendar.getInstance().getTime())
                 + "##############################\r\n");
+    }
+
+    public BlockingQueue<ErrorMeta> analyzeUniqueError(Criterion instance, Cache<String, String> ignoredErrorCache) {
+        resetInfo(instance);
+        BlockingQueue<ErrorMeta> uniqueErrorLogQueue = new LinkedBlockingQueue<>();
         Pattern startPattern = Pattern.compile(instance.getErrorStartID(), Pattern.CASE_INSENSITIVE);
         Pattern endPattern = Pattern.compile(instance.getErrorEndID());
         while (iterator.hasNext()) {
