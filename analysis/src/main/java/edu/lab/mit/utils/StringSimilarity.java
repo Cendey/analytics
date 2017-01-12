@@ -33,10 +33,10 @@ public class StringSimilarity {
      * @param one     <p>One string content</p>
      * @param another <p>Another string content</p>
      * @return <p>Distance</p>
-     * @see <p>http://rosettacode.org/wiki/Levenshtein_distance#Java</p>
+     * @link http://rosettacode.org/wiki/Levenshtein_distance#Java
      */
     // Example implementation of the Levenshtein Edit Distance
-    public static int editDistance(String one, String another) {
+    private static int editDistance(String one, String another) {
         one = one.toLowerCase();
         another = another.toLowerCase();
 
@@ -64,7 +64,7 @@ public class StringSimilarity {
         return costs[another.length()];
     }
 
-    public static void printSimilarity(String s, String t) {
+    private static void printSimilarity(String s, String t) {
         System.out.println(String.format(
             "%.3f is the similarity between \"%s\" and \"%s\"", similarity(s, t), s, t));
     }
@@ -179,6 +179,16 @@ public class StringSimilarity {
             + "\tat weblogic.rmi.internal.wls.WLSExecuteRequest.run(WLSExecuteRequest.java:118)\n"
             + "\tat weblogic.work.ExecuteThread.execute(ExecuteThread.java:201)\n"
             + "\tat weblogic.work.ExecuteThread.run(ExecuteThread.java:173)");
+        printSimilarity("{This sql result maybe too large}:\n"
+            + "select modulecode,functiontype from SYModuleFunc order by ModuleCode\n"
+            + "Caller:com.ipacs.als.authen.LoadRelatedInfo", "{This sql result maybe too large}:\n"
+            + "select modulecode,functiontype from SYModuleFunc order by ModuleCode\n"
+            + "Caller:com.ipacs.als.authen.LoadRelatedInfo, total count is @[2567]");
+        printSimilarity("{This sql result maybe too large}:\n"
+            + "select * from symodulefunc\n"
+            + "Caller:com.ipacs.als.authen.LoadRelatedInfo","{This sql result maybe too large}:\n"
+            + "select * from symodulefunc\n"
+            + "Caller:com.ipacs.als.authen.LoadRelatedInfo, total count is @[2567]");
     }
 
 }

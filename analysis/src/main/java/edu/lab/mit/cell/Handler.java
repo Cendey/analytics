@@ -4,6 +4,8 @@ import edu.lab.mit.norm.Criterion;
 import edu.lab.mit.norm.ErrorMeta;
 import edu.lab.mit.norm.FileIterator;
 import edu.lab.mit.utils.StringSimilarity;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.math3.stat.descriptive.moment.StandardDeviation;
 import org.ehcache.Cache;
 import org.ehcache.CacheManager;
 import org.ehcache.config.builders.CacheConfigurationBuilder;
@@ -37,7 +39,9 @@ import java.util.regex.Pattern;
  */
 public class Handler {
 
-    private FileIterator iterator;
+    private static FileIterator iterator;
+
+    @SuppressWarnings(value = {"unused"})
     private final static Pattern pattern = Pattern.compile(
         "^((((1[6-9]|[2-9]\\d)\\d{2})-(0?[13578]|1[02])-(0?[1-9]|[12]\\d|3[01]))|(((1[6-9]|[2-9]\\d)\\d{2})-(0?[13456789]|1[012])-(0?[1-9]|[12]\\d|30))|(((1[6-9]|[2-9]\\d)\\d{2})-0?2-(0?[1-9]|1\\d|2[0-8]))|(((1[6-9]|[2-9]\\d)(0[48]|[2468][048]|[13579][26])|((16|[2468][048]|[3579][26])00))-0?2-29-)) (20|21|22|23|[0-1]?\\d):[0-5]?\\d:[0-5]?\\d",
         Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
@@ -50,6 +54,7 @@ public class Handler {
         if (instance == null) {
             instance = new Handler(from, to);
         }
+        iterator.build(from, to);
         return instance;
     }
 
@@ -75,8 +80,6 @@ public class Handler {
 
     public BlockingQueue<ErrorMeta> analyzeUniqueError(Criterion instance, Cache<String, String> ignoredErrorCache) {
         Boolean errorOccurred = false;
-        Boolean successiveError = false;
-        Boolean newErrorFollowed = false;
         StringBuilder error = new StringBuilder();
         StringBuilder tempError = new StringBuilder();
         List<String> lstUserID = operators(instance.getUserID());
@@ -87,32 +90,27 @@ public class Handler {
             "\r\n##############################" + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
                 .format(GregorianCalendar.getInstance().getTime())
                 + "##############################\r\n");
-        Pattern errorPattern = Pattern.compile(instance.getErrorStartID(), Pattern.CASE_INSENSITIVE);
+        Pattern startPattern = Pattern.compile(instance.getErrorStartID(), Pattern.CASE_INSENSITIVE);
+        Pattern endPattern = Pattern.compile(instance.getErrorEndID());
         while (iterator.hasNext()) {
             String content = iterator.next();
-            if (content != null && content.trim().length() != 0) {
-                Matcher matcher = errorPattern.matcher(content);
-                if (matcher.find() && (lstUserID == null || lstUserID.stream().anyMatch(content::contains))) {
+            if (StringUtils.isNotEmpty(content)) {
+                Matcher startMatcher = startPattern.matcher(errorOccurred ? "" : content);
+                //If not detect the error start point, cancel the error indicator match.
+                Matcher endMatcher = endPattern.matcher(errorOccurred ? content : "");
+                if (startMatcher.find(0) && (lstUserID == null || lstUserID.stream().anyMatch(content::contains))) {
                     errorOccurred = true;
-                    if (!successiveError) {
-                        successiveError = true;
-                        newErrorFollowed = false;
-                        error.append(content).append("\r\n");
-                        tempError.append(content.substring(matcher.end()));
-                        currDate = content.substring(0, matcher.end()).trim();
-                    } else {
-                        successiveError = false;
-                        newErrorFollowed = true;
-                    }
+                    error.append(content).append("\r\n");
+                    tempError.append(content.substring(startMatcher.end()));
+                    currDate = content.substring(0, startMatcher.end()).trim();
                 } else {
-                    if (errorOccurred) {
-                        if (successiveError = !pattern.matcher(content).find()) {
-                            error.append(content).append("\r\n");
-                            tempError.append(content);
-                        }
+                    if (errorOccurred && !endMatcher.find(0)) {
+                        error.append(content).append("\r\n");
+                        tempError.append(content);
                     }
                 }
-                if (errorOccurred && !successiveError) {
+                if (endMatcher.find(0)) {
+                    errorOccurred = false;
                     String currentErrorContent = refineErrorContents(tempError, lstUserID);
                     String errorMD5 = genContentMD5(currentErrorContent);
                     if (ignoredErrorCache.get(errorMD5) == null) {
@@ -130,32 +128,30 @@ public class Handler {
 
                     error.delete(0, error.length());
                     tempError.delete(0, tempError.length());
-                    errorOccurred = newErrorFollowed;
-                    if (newErrorFollowed) {
-                        newErrorFollowed = false;
-                        successiveError = true;
+                    if (startMatcher.find(0) && startPattern.matcher(content).find(0)) {
+                        errorOccurred = true;
                         error.append(content).append("\r\n");
-                        tempError.append(content.substring(matcher.end()));
-                        currDate = content.substring(0, matcher.end()).trim();
+                        tempError.append(content.substring(startMatcher.end()));
+                        currDate = content.substring(0, startMatcher.end()).trim();
                     }
                 }
             }
         }
         iterator.appendContentToFile("Found " + errorCounter + " errors!");
-        iterator.close();
         return uniqueErrorLogQueue;
     }
 
-    private boolean isMismatched(Cache<String, String> ignoredErrorCache, String currentErrorContent) {
-        boolean noneIgnoredMatched = false;
-        Iterator<Cache.Entry<String, String>> errorIterator = ignoredErrorCache.iterator();
-        while (!noneIgnoredMatched && errorIterator.hasNext()) {
+    private boolean isMismatched(Cache<String, String> errorCache, String currentErrorContent) {
+        boolean matched = false;
+        StandardDeviation sd = new StandardDeviation(false);
+        Iterator<Cache.Entry<String, String>> errorIterator = errorCache.iterator();
+        while (!matched && errorIterator.hasNext()) {
             Cache.Entry<String, String> entry = errorIterator.next();
-            noneIgnoredMatched = entry.getValue().length() > currentErrorContent.length() * 0.9
-                && entry.getValue().length() < currentErrorContent.length() * 1.1
-                && StringSimilarity.similarity(entry.getValue(), currentErrorContent) > 0.9;
+            double[] lengths = {entry.getValue().length(), currentErrorContent.length()};
+            matched = sd.evaluate(lengths) / entry.getValue().length() < 0.1
+                && StringSimilarity.similarity(entry.getValue(), currentErrorContent) > 0.8;
         }
-        return noneIgnoredMatched;
+        return matched;
     }
 
     public String refineErrorContents(StringBuilder tempError, List<String> lstUserID) {
@@ -169,7 +165,7 @@ public class Handler {
     }
 
     private String genContentMD5(String content) {
-        if (content != null && content.length() > 0) {
+        if (StringUtils.isNotEmpty(content)) {
             try {
                 MessageDigest digest = MessageDigest.getInstance("MD5");
                 digest.update(content.getBytes(StandardCharsets.UTF_8));
@@ -183,7 +179,7 @@ public class Handler {
 
     public List<String> operators(String operators) {
         List<String> lstOperator = null;
-        if (operators != null && operators.trim().length() > 0) {
+        if (StringUtils.isNotEmpty(operators)) {
             lstOperator = new ArrayList<>();
             final List<String> finalLstOperator = lstOperator;
             Arrays.stream(operators.split("\\|")).forEach(item -> finalLstOperator.add("[" + item + "]"));
@@ -192,6 +188,7 @@ public class Handler {
     }
 
     public void cleanUp() {
+        iterator.close();
         cacheManager.close();
     }
 }

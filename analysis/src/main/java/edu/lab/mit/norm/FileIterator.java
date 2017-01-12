@@ -30,6 +30,11 @@ public class FileIterator implements Iterator<String> {
 
     public FileIterator(String toReadFilePath, String toWriteFilePath)
         throws FileNotFoundException, UnsupportedEncodingException {
+        build(toReadFilePath, toWriteFilePath);
+    }
+
+    public void build(String toReadFilePath, String toWriteFilePath)
+        throws UnsupportedEncodingException, FileNotFoundException {
         reader = new BufferedReader(new InputStreamReader(new FileInputStream(toReadFilePath), "UTF-8"));
         writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(toWriteFilePath, true), "UTF-8"));
     }
