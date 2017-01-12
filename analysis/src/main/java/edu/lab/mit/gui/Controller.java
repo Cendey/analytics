@@ -34,6 +34,7 @@ import java.io.File;
 import java.net.URL;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.Objects;
 import java.util.ResourceBundle;
 import java.util.concurrent.BlockingQueue;
 
@@ -313,6 +314,7 @@ public class Controller implements Initializable {
                     uniqueErrorLogInfo.getSelectionModel().focus(0);
                     currentItemIndex.textProperty().set("SNo.: 0");
                 }
+                uniqueErrorLogInfo.refresh();
             } catch (Exception e) {
                 System.out.println(e.getMessage());
             } finally {
@@ -323,6 +325,8 @@ public class Controller implements Initializable {
 
     private void prepareInfo() {
         meta.clearLog();
+        uniqueErrorLogInfo.getItems().removeIf(Objects::nonNull);
+        uniqueErrorLogInfo.refresh();
         errorCounter.textProperty().set("");
         analyzeError.setDisable(true);
     }

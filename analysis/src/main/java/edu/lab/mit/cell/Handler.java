@@ -84,6 +84,7 @@ public class Handler {
         errorCounter = 0;
         errorOccurred = false;
         currDate = null;
+        identifiedIdCache.clear();
         error = new StringBuilder();
         tempError = new StringBuilder();
         lstUserID = operators(instance.getUserID());
@@ -166,10 +167,12 @@ public class Handler {
 
     public String refineErrorContents(StringBuilder tempError, List<String> lstUserID) {
         StringBuilder result = new StringBuilder();
-        if (lstUserID != null && lstUserID.size() > 0) {
-            lstUserID.stream().filter(id->tempError.indexOf(id) != -1)
+        if (lstUserID.stream().findAny().isPresent()) {
+            lstUserID.stream().distinct().filter(id -> tempError.indexOf(id) != -1)
                 .mapToInt(id -> tempError.indexOf(id) + id.length()).min()
                 .ifPresent(pos -> result.append(tempError.substring(pos)));
+        } else {
+            result.append(tempError);
         }
         return result.toString();
     }
