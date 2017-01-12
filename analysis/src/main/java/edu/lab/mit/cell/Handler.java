@@ -39,14 +39,20 @@ import java.util.regex.Pattern;
  */
 public class Handler {
 
-    private static FileIterator iterator;
+    private int errorCounter = 0;
+    private Boolean errorOccurred = false;
+    private String currDate = null;
 
     @SuppressWarnings(value = {"unused"})
     private final static Pattern pattern = Pattern.compile(
         "^((((1[6-9]|[2-9]\\d)\\d{2})-(0?[13578]|1[02])-(0?[1-9]|[12]\\d|3[01]))|(((1[6-9]|[2-9]\\d)\\d{2})-(0?[13456789]|1[012])-(0?[1-9]|[12]\\d|30))|(((1[6-9]|[2-9]\\d)\\d{2})-0?2-(0?[1-9]|1\\d|2[0-8]))|(((1[6-9]|[2-9]\\d)(0[48]|[2468][048]|[13579][26])|((16|[2468][048]|[3579][26])00))-0?2-29-)) (20|21|22|23|[0-1]?\\d):[0-5]?\\d:[0-5]?\\d",
         Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
 
+    private List<String> lstUserID;
+    private static FileIterator iterator;
     private static Handler instance;
+    private StringBuilder error;
+    private StringBuilder tempError;
     private CacheManager cacheManager;
     private Cache<String, String> identifiedErrorCache;
 
@@ -78,14 +84,18 @@ public class Handler {
         return iterator;
     }
 
+    private void resetInfo() {
+        errorCounter = 0;
+        errorOccurred = false;
+        currDate = null;
+        error = new StringBuilder();
+        tempError = new StringBuilder();
+    }
+
     public BlockingQueue<ErrorMeta> analyzeUniqueError(Criterion instance, Cache<String, String> ignoredErrorCache) {
-        Boolean errorOccurred = false;
-        StringBuilder error = new StringBuilder();
-        StringBuilder tempError = new StringBuilder();
-        List<String> lstUserID = operators(instance.getUserID());
+        resetInfo();
+        lstUserID = operators(instance.getUserID());
         BlockingQueue<ErrorMeta> uniqueErrorLogQueue = new LinkedBlockingQueue<>();
-        String currDate = null;
-        int errorCounter = 0;
         iterator.appendContentToFile(
             "\r\n##############################" + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
                 .format(GregorianCalendar.getInstance().getTime())
@@ -98,34 +108,10 @@ public class Handler {
                 Matcher startMatcher = startPattern.matcher(errorOccurred ? "" : content);
                 //If not detect the error start point, cancel the error indicator match.
                 Matcher endMatcher = endPattern.matcher(errorOccurred ? content : "");
-                if (startMatcher.find(0) && (lstUserID == null || lstUserID.stream().anyMatch(content::contains))) {
-                    errorOccurred = true;
-                    error.append(content).append("\r\n");
-                    tempError.append(content.substring(startMatcher.end()));
-                    currDate = content.substring(0, startMatcher.end()).trim();
-                } else {
-                    if (errorOccurred && !endMatcher.find(0)) {
-                        error.append(content).append("\r\n");
-                        tempError.append(content);
-                    }
-                }
+                appendError(startMatcher, endMatcher, content);
                 if (endMatcher.find(0)) {
                     errorOccurred = false;
-                    String currentErrorContent = refineErrorContents(tempError, lstUserID);
-                    String errorMD5 = genContentMD5(currentErrorContent);
-                    if (ignoredErrorCache.get(errorMD5) == null) {
-                        boolean ignoredMatched = isMismatched(ignoredErrorCache, currentErrorContent);
-                        boolean identifiedMatched = isMismatched(identifiedErrorCache, currentErrorContent);
-                        if (!ignoredMatched && !identifiedMatched) {
-                            iterator
-                                .appendContentToFile("[No." + errorCounter + "]" + error.toString() + "\r\n");
-                            uniqueErrorLogQueue
-                                .add(new ErrorMeta(errorCounter, currDate, errorMD5, error.toString()));
-                            identifiedErrorCache.put(errorMD5, refineErrorContents(tempError, lstUserID));
-                            errorCounter++;
-                        }
-                    }
-
+                    filterError(ignoredErrorCache, uniqueErrorLogQueue);
                     error.delete(0, error.length());
                     tempError.delete(0, tempError.length());
                     if (startMatcher.find(0) && startPattern.matcher(content).find(0)) {
@@ -139,6 +125,37 @@ public class Handler {
         }
         iterator.appendContentToFile("Found " + errorCounter + " errors!");
         return uniqueErrorLogQueue;
+    }
+
+    private void filterError(Cache<String, String> ignoredErrorCache, BlockingQueue<ErrorMeta> uniqueErrorLogQueue) {
+        String currentErrorContent = refineErrorContents(tempError, lstUserID);
+        String errorMD5 = genContentMD5(currentErrorContent);
+        if (ignoredErrorCache.get(errorMD5) == null) {
+            boolean ignoredMatched = isMismatched(ignoredErrorCache, currentErrorContent);
+            boolean identifiedMatched = isMismatched(identifiedErrorCache, currentErrorContent);
+            if (!ignoredMatched && !identifiedMatched) {
+                iterator
+                    .appendContentToFile("[No." + errorCounter + "]" + error.toString() + "\r\n");
+                uniqueErrorLogQueue
+                    .add(new ErrorMeta(errorCounter, currDate, errorMD5, error.toString()));
+                identifiedErrorCache.put(errorMD5, refineErrorContents(tempError, lstUserID));
+                errorCounter++;
+            }
+        }
+    }
+
+    private void appendError(Matcher startMatcher, Matcher endMatcher, String content) {
+        if (startMatcher.find(0) && (lstUserID == null || lstUserID.stream().anyMatch(content::contains))) {
+            errorOccurred = true;
+            error.append(content).append("\r\n");
+            tempError.append(content.substring(startMatcher.end()));
+            currDate = content.substring(0, startMatcher.end()).trim();
+        } else {
+            if (errorOccurred && !endMatcher.find(0)) {
+                error.append(content).append("\r\n");
+                tempError.append(content);
+            }
+        }
     }
 
     private boolean isMismatched(Cache<String, String> errorCache, String currentErrorContent) {
