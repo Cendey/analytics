@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.UnsupportedEncodingException;
+import java.nio.charset.StandardCharsets;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
@@ -86,8 +87,8 @@ public class FileIterator implements Iterator<String> {
     }
 
     private boolean doesWrite(String content) throws UnsupportedEncodingException {
-        int bytes = String.valueOf(buffer.toString()).getBytes("UTF-8").length;
-        return bytes < BUFFER_SIZE && bytes + content.getBytes("UTF-8").length >= BUFFER_SIZE;
+        int bytes = String.valueOf(buffer.toString()).getBytes(StandardCharsets.UTF_8).length;
+        return bytes < BUFFER_SIZE && bytes + content.getBytes(StandardCharsets.UTF_8).length >= BUFFER_SIZE;
     }
 
     @Override
