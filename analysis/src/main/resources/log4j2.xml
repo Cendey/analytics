@@ -1,32 +1,33 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<Configuration debug="off" status="trace" strict="true" monitorInterval="1800" schema="log4j-v2.0.xsd">
+<!--Please refer to the following document guide#http://logging.apache.org/log4j/2.x/manual/layouts.html#XMLLayout-->
+<Configuration debug="off" status="trace" strict="true" monitorInterval="1800" schema="Log4J-V2.7.xsd">
     <Properties>
-        <Property name="logPath">logs</Property>
+        <Property name="logPath">target/logs</Property>
     </Properties>
     <Appenders>
         <Console name="Console" target="SYSTEM_OUT">
             <PatternLayout
-                    pattern="%d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %-5level %class{36}.%M()/%L  - %msg%xEx%n %replace{%logger}{\.}{/}"/>
+                    pattern="%d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %-5level %C{36}#%M():%L  - %m%xEx{full}%n"/>
         </Console>
         <File name="AppDebug" fileName="${logPath}/app/debug.log" append="false">
             <Filters>
                 <ThresholdFilter level="info" onMatch="DENY" onMismatch="NEUTRAL"/>
                 <ThresholdFilter level="debug" onMatch="ACCEPT" onMismatch="NEUTRAL"/>
             </Filters>
-            <PatternLayout pattern="%d{yyyy.MM.dd HH:mm:ss z} [%t] %-5level %class{36}.%M()/%L - %msg%xEx%n"/>
+            <PatternLayout pattern="%d{yyyy.MM.dd HH:mm:ss z} [%t] %-5level %C{36}#%M():%L - %m%xEx{full}%n"/>
         </File>
         <File name="AppInfo" fileName="${logPath}/app/info.log" append="false">
             <Filters>
                 <ThresholdFilter level="warn" onMatch="DENY" onMismatch="NEUTRAL"/>
                 <ThresholdFilter level="info" onMatch="ACCEPT" onMismatch="DENY"/>
             </Filters>
-            <PatternLayout pattern="%d{yyyy.MM.dd HH:mm:ss z} [%t] %-5level %class{36}.%M()/%L - %msg%xEx%n"/>
+            <PatternLayout pattern="%d{yyyy.MM.dd HH:mm:ss z} [%t] %-5level %C{36}#%M():%L - %m%xEx{full}%n"/>
         </File>
         <File name="AppError" fileName="${logPath}/app/error.log" append="false">
             <Filters>
                 <ThresholdFilter level="warn" onMatch="ACCEPT" onMismatch="DENY"/>
             </Filters>
-            <PatternLayout pattern="%d{yyyy.MM.dd HH:mm:ss z} [%t] %-5level %class{36}.%M()/%L - %msg%xEx%n"/>
+            <PatternLayout pattern="%d{yyyy.MM.dd HH:mm:ss z} [%t] %-5level %C{36}#%M():%L - %m%xEx{full}%n"/>
         </File>
     </Appenders>
     <Loggers>
