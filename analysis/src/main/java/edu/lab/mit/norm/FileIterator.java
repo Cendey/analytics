@@ -1,5 +1,8 @@
 package edu.lab.mit.norm;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.FileInputStream;
@@ -16,7 +19,7 @@ import java.util.NoSuchElementException;
 /**
  * <p>Project: KEWILL FORWARD ENTERPRISE</p>
  * <p>File: edu.lab.mit.norm.FileIterator</p>
- * <p>Copyright: Copyright � 2015 Kewill Co., Ltd. All Rights Reserved.</p>
+ * <p>Copyright: Copyright @2015 Kewill Co., Ltd. All Rights Reserved.</p>
  * <p>Company: Kewill Co., Ltd</p>
  *
  * @author <chao.deng@kewill.com>
@@ -25,6 +28,7 @@ import java.util.NoSuchElementException;
  */
 public class FileIterator implements Iterator<String> {
 
+    private static Logger logger = LogManager.getLogger(FileIterator.class);
     private final static long BUFFER_SIZE = (2 << 12);
     private String currentLine;
     private BufferedReader reader;
@@ -52,20 +56,20 @@ public class FileIterator implements Iterator<String> {
                 writer.close();
             }
         } catch (Exception e) {
-            System.out.println(e.getMessage());
+            logger.error(e.getMessage());
         } finally {
             if (reader != null) {
                 try {
                     reader.close();
                 } catch (IOException e) {
-                    System.out.println(e.getMessage());
+                    logger.error(e.getMessage());
                 }
             }
             if (writer != null) {
                 try {
                     writer.close();
                 } catch (IOException e) {
-                    System.out.println(e.getMessage());
+                    logger.error(e.getMessage());
                 }
             }
         }
@@ -78,11 +82,12 @@ public class FileIterator implements Iterator<String> {
                 writer.write(buffer.toString());
                 writer.flush();
                 buffer.delete(0, buffer.length());
+                logger.info("Write identified error(s) to file.");
             } else {
                 buffer.append(content);
             }
         } catch (IOException e) {
-            System.out.println(e.getMessage());
+            logger.error(e.getMessage());
         }
     }
 
@@ -97,7 +102,7 @@ public class FileIterator implements Iterator<String> {
             currentLine = reader.readLine();
         } catch (Exception ex) {
             currentLine = null;
-            System.err.println(ex.getMessage());
+            logger.error(ex.getMessage());
         }
 
         return currentLine != null;
@@ -106,6 +111,7 @@ public class FileIterator implements Iterator<String> {
     @Override
     public String next() {
         if (currentLine == null) {
+            logger.error("No content will be read");
             throw new NoSuchElementException("No content will be read");
         }
         return currentLine;

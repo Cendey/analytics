@@ -6,6 +6,8 @@ import edu.lab.mit.norm.FileIterator;
 import edu.lab.mit.utils.StringSimilarity;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.math3.stat.descriptive.moment.StandardDeviation;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.ehcache.Cache;
 import org.ehcache.CacheManager;
 import org.ehcache.config.builders.CacheConfigurationBuilder;
@@ -39,6 +41,7 @@ import java.util.regex.Pattern;
  */
 public class Handler {
 
+    private static Logger logger = LogManager.getLogger(Handler.class);
     private int errorCounter = 0;
     private Boolean errorOccurred = false;
     private String currDate = null;
@@ -185,7 +188,7 @@ public class Handler {
                 digest.update(content.getBytes(StandardCharsets.UTF_8));
                 return new BigInteger(1, digest.digest()).toString();
             } catch (NoSuchAlgorithmException e) {
-                System.out.println(e.getMessage());
+                logger.error(e.getMessage());
             }
         }
         return "";

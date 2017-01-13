@@ -1,7 +1,11 @@
 package edu.lab.mit.utils;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 public class StringSimilarity {
 
+    private static Logger logger = LogManager.getLogger(StringSimilarity.class);
     /**
      * <em>Calculates the similarity (a number within 0 and 1) between two strings.</em>
      *
@@ -19,10 +23,10 @@ public class StringSimilarity {
         if (longerLength == 0) {
             return 1.0; /* both strings are zero length */
         }
-    /*
-    If you have StringUtils, you can use it to calculate the edit distance:
-    return (longerLength - StringUtils.getLevenshteinDistance(longer, shorter)) / (double) longerLength;
-     */
+        /*
+        If you have StringUtils, you can use it to calculate the edit distance:
+        return (longerLength - StringUtils.getLevenshteinDistance(longer, shorter)) / (double) longerLength;
+         */
         return (longerLength - editDistance(longer, shorter)) / (double) longerLength;
 
     }
@@ -65,8 +69,7 @@ public class StringSimilarity {
     }
 
     private static void printSimilarity(String s, String t) {
-        System.out.println(String.format(
-            "%.3f is the similarity between \"%s\" and \"%s\"", similarity(s, t), s, t));
+        logger.info("{} is the similarity between \"{}\" and \"{}\"", similarity(s, t), s, t);
     }
 
     public static void main(String[] args) {

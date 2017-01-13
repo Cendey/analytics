@@ -13,6 +13,8 @@ import javafx.scene.control.TableView;
 import javafx.scene.image.Image;
 import javafx.scene.layout.Pane;
 import javafx.stage.Stage;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 /**
  * <p>Project: KEWILL FORWARD ENTERPRISE</p>
@@ -26,6 +28,7 @@ import javafx.stage.Stage;
  */
 public class Launcher extends Application {
 
+    Logger logger = LogManager.getLogger(Launcher.class);
     @Override
     public void start(Stage primaryStage) throws Exception {
         ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
@@ -37,6 +40,7 @@ public class Launcher extends Application {
         scene.getStylesheets().add("/config/styles.css");
         primaryStage.setOnCloseRequest(
             windowEvent -> {
+                logger.info("System exit!");
                 primaryStage.hide();
                 controller.exit();
             });

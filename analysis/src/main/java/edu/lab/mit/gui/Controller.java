@@ -22,6 +22,8 @@ import javafx.scene.control.TextField;
 import javafx.scene.control.Tooltip;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.stage.FileChooser;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.ehcache.Cache;
 import org.ehcache.PersistentCacheManager;
 import org.ehcache.config.builders.CacheConfigurationBuilder;
@@ -32,6 +34,7 @@ import org.ehcache.config.units.MemoryUnit;
 
 import java.io.File;
 import java.net.URL;
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.Objects;
@@ -64,6 +67,7 @@ public class Controller implements Initializable {
     public TextField currentItemIndex;
     public Button nextItem;
 
+    private Logger logger = LogManager.getLogger(Controller.class);
     private Criterion criterion;
     private final static LogMeta meta = LogMeta.getInstance();
     private final ObservableList<ErrorMeta> data = FXCollections.observableArrayList();
@@ -113,6 +117,7 @@ public class Controller implements Initializable {
             .build(true);
         criterionCache = cacheManager.getCache("criterion", String.class, String.class);
         errorIgnoredCache = cacheManager.getCache("errorIgnored", String.class, String.class);
+        logger.info("Init persistence cache manager {}",cacheManager);
     }
 
     private void initNavigationBar() {
@@ -302,6 +307,7 @@ public class Controller implements Initializable {
         if (!criterionAlready() || !isFileAvailable(sourceErrorLog) || !isFileAvailable(targetErrorLog)) return;
         new Thread(() -> {
             try {
+                long startPoint = System.currentTimeMillis();
                 prepareInfo();
                 handler = Handler.getInstance(criterion.getSourceFilePath(), criterion.getTargetFilePath());
                 BlockingQueue<ErrorMeta> queue = handler.analyzeUniqueError(criterion, errorIgnoredCache);
@@ -313,8 +319,12 @@ public class Controller implements Initializable {
                     currentItemIndex.textProperty().set("SNo.: 0");
                 }
                 uniqueErrorLogInfo.refresh();
+                long spendsTime = System.currentTimeMillis() - startPoint;
+                Duration duration = Duration.ofMillis(spendsTime);
+                logger.info("Analysis process spends {} hour(s) {} minutes {} seconds", duration.toHours(),
+                        duration.toMinutes(), duration.getSeconds());
             } catch (Exception e) {
-                System.out.println(e.getMessage());
+                logger.error(e.getMessage());
             } finally {
                 analyzeError.setDisable(false);
             }
@@ -398,6 +408,7 @@ public class Controller implements Initializable {
 
     private void pushFilter(Criterion criterion) {
         if (criterionCache != null) {
+            logger.info("Init criterion items for further work.");
             criterion.setErrorStartID(criterionCache.get(Literals.ERROR_START_ID));
             criterion.setErrorEndID(criterionCache.get(Literals.ERROR_END_ID));
             criterion.setUserID(criterionCache.get(Literals.USER_ID));
@@ -411,6 +422,7 @@ public class Controller implements Initializable {
             handler.cleanUp();
         }
         cacheManager.close();
+        logger.info("Clean up all available operation system resources and exit.");
         System.exit(0);
     }
 }
