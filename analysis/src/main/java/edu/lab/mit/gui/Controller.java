@@ -321,7 +321,7 @@ public class Controller implements Initializable {
                 uniqueErrorLogInfo.refresh();
                 long spendsTime = System.currentTimeMillis() - startPoint;
                 Duration duration = Duration.ofMillis(spendsTime);
-                logger.info("Analysis process spends {} hour(s) {} minutes {} seconds", duration.toHours(),
+                logger.info("Analysis process spends {} hour(s) {} minute(s) {} second(s)", duration.toHours(),
                         duration.toMinutes(), duration.getSeconds());
             } catch (Exception e) {
                 logger.error(e.getMessage());

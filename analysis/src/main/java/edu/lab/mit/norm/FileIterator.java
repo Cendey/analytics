@@ -81,7 +81,7 @@ public class FileIterator implements Iterator<String> {
                 buffer.append(content);
                 writer.write(buffer.toString());
                 writer.flush();
-                logger.info("Write {}KB size identified error(s) to file.",
+                logger.info("Write {}KB contents to identified error(s) file.",
                     String.valueOf(buffer.toString()).getBytes(StandardCharsets.UTF_8).length >>> 10);
                 buffer.delete(0, buffer.length());
             } else {
