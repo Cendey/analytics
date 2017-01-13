@@ -9,21 +9,21 @@
             <PatternLayout
                     pattern="%d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %-5level %C{36}#%M():%L  - %m%xEx{full}%n"/>
         </Console>
-        <File name="AppDebug" fileName="${logPath}/app/debug.log" append="false">
+        <File name="Debug" fileName="${logPath}/app/debug.log" append="false">
             <Filters>
                 <ThresholdFilter level="info" onMatch="DENY" onMismatch="NEUTRAL"/>
                 <ThresholdFilter level="debug" onMatch="ACCEPT" onMismatch="NEUTRAL"/>
             </Filters>
             <PatternLayout pattern="%d{yyyy.MM.dd HH:mm:ss z} [%t] %-5level %C{36}#%M():%L - %m%xEx{full}%n"/>
         </File>
-        <File name="AppInfo" fileName="${logPath}/app/info.log" append="false">
+        <File name="Information" fileName="${logPath}/app/info.log" append="false">
             <Filters>
                 <ThresholdFilter level="warn" onMatch="DENY" onMismatch="NEUTRAL"/>
                 <ThresholdFilter level="info" onMatch="ACCEPT" onMismatch="DENY"/>
             </Filters>
             <PatternLayout pattern="%d{yyyy.MM.dd HH:mm:ss z} [%t] %-5level %C{36}#%M():%L - %m%xEx{full}%n"/>
         </File>
-        <File name="AppError" fileName="${logPath}/app/error.log" append="false">
+        <File name="Error" fileName="${logPath}/app/error.log" append="false">
             <Filters>
                 <ThresholdFilter level="warn" onMatch="ACCEPT" onMismatch="DENY"/>
             </Filters>
@@ -33,9 +33,9 @@
     <Loggers>
         <Logger name="edu.lab.mit" level="trace" additivity="false">
             <AppenderRef ref="Console"/>
-            <AppenderRef ref="AppDebug"/>
-            <AppenderRef ref="AppInfo"/>
-            <AppenderRef ref="AppError"/>
+            <AppenderRef ref="Debug"/>
+            <AppenderRef ref="Information"/>
+            <AppenderRef ref="Error"/>
         </Logger>
         <Root level="Info">
             <AppenderRef ref="Console"/>
