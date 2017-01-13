@@ -41,7 +41,7 @@ import java.util.concurrent.BlockingQueue;
 /**
  * <p>Project: KEWILL FORWARD ENTERPRISE</p>
  * <p>File: edu.lab.mit.gui.Controller</p>
- * <p>Copyright: Copyright � 2015 Kewill Co., Ltd. All Rights Reserved.</p>
+ * <p>Copyright: Copyright @2015 Kewill Co., Ltd. All Rights Reserved.</p>
  * <p>Company: Kewill Co., Ltd</p>
  *
  * @author <chao.deng@kewill.com>
@@ -124,7 +124,6 @@ public class Controller implements Initializable {
                     uniqueErrorLogInfo.getSelectionModel().select(currentRowIndex - 1);
                     uniqueErrorLogInfo.getSelectionModel().focus(currentRowIndex - 1);
                     uniqueErrorLogInfo.scrollTo(currentRowIndex - 1);
-                    uniqueErrorLogInfo.refresh();
                     currentItemIndex.textProperty().set("SNo.: " + (currentRowIndex - 1));
                 }
             }
@@ -138,7 +137,6 @@ public class Controller implements Initializable {
                     uniqueErrorLogInfo.getSelectionModel().select(currentRowIndex + 1);
                     uniqueErrorLogInfo.getSelectionModel().focus(currentRowIndex + 1);
                     uniqueErrorLogInfo.scrollTo(currentRowIndex + 1);
-                    uniqueErrorLogInfo.refresh();
                     currentItemIndex.textProperty().set("SNo.: " + (currentRowIndex + 1));
                 }
             }
@@ -326,7 +324,6 @@ public class Controller implements Initializable {
     private void prepareInfo() {
         meta.clearLog();
         uniqueErrorLogInfo.getItems().removeIf(Objects::nonNull);
-        uniqueErrorLogInfo.refresh();
         errorCounter.textProperty().set("");
         analyzeError.setDisable(true);
     }
