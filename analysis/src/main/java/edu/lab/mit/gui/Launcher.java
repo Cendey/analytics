@@ -33,7 +33,7 @@ public class Launcher extends Application {
         final Parent root = Parent.class.cast(loader.load());
         final Controller controller = Controller.class.cast(loader.getController());
 
-        Scene scene = new Scene(root, 1200, 800);
+        Scene scene = new Scene(root, 1200, 820);
         scene.getStylesheets().add("/config/styles.css");
         primaryStage.setOnCloseRequest(
             windowEvent -> {
