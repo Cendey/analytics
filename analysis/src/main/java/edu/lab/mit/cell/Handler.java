@@ -61,6 +61,7 @@ public class Handler {
 
     public static Handler getInstance(String from, String to) throws Exception {
         if (instance == null) {
+            logger.info("The first time to analysis error information.");
             instance = new Handler(from, to);
         }
         iterator.build(from, to);
