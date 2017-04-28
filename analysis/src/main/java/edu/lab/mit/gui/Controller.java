@@ -311,7 +311,7 @@ public class Controller implements Initializable {
                 prepareInfo();
                 handler = Handler.getInstance(criterion.getSourceFilePath(), criterion.getTargetFilePath());
                 BlockingQueue<ErrorMeta> queue = handler.analyzeUniqueError(criterion, errorIgnoredCache);
-                queue.forEach(data::add);
+                data.addAll(queue);
                 errorCounter.textProperty().set("Total errors: " + queue.size());
                 if (queue.size() > 0) {
                     uniqueErrorLogInfo.getSelectionModel().select(0);
