@@ -25,7 +25,7 @@ import java.util.Properties;
  */
 public class Loader {
 
-    public final static String IGNORE_ERROR_ID_CONFIGURE = "config/ignores.xml";
+    private final static String IGNORE_ERROR_ID_CONFIGURE = "config/ignores.xml";
     public final static String FILTER_CRITERION_CONFIGURE = "config/filter.xml";
     private final static Properties ignores = new Properties();
     private final static Properties filters = new Properties();
@@ -62,7 +62,7 @@ public class Loader {
         return url != null ? url.getPath() : "";
     }
 
-    public static void load(Properties config, String filePath) {
+    private static void load(Properties config, String filePath) {
         try {
             InputStream inputStream =
                 Thread.currentThread().getContextClassLoader().getResourceAsStream(filePath);
@@ -101,7 +101,7 @@ public class Loader {
     private static void writeToXML(File configFile, Map<String, Object> backupInfo, Boolean isIgnoreInfo) {
         if (backupInfo != null && backupInfo.size() > 0) {
             List<String> keys = new ArrayList<>();
-            backupInfo.keySet().forEach(keys::add);
+            keys.addAll(backupInfo.keySet());
             keys.sort(String::compareTo);
             try (OutputStreamWriter writer = new OutputStreamWriter(new FileOutputStream(configFile, false), "UTF-8")) {
                 StringBuilder content = new StringBuilder();

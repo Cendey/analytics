@@ -28,7 +28,7 @@ import org.apache.logging.log4j.Logger;
  */
 public class Launcher extends Application {
 
-    Logger logger = LogManager.getLogger(Launcher.class);
+    private static Logger logger = LogManager.getLogger(Launcher.class);
     @Override
     public void start(Stage primaryStage) throws Exception {
         ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
