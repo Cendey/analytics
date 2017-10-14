@@ -1,10 +1,7 @@
 package edu.lab.mit.norm;
 
 import javafx.beans.property.SimpleIntegerProperty;
-import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
-
-import java.util.Date;
 
 /**
  * <p>Project: KEWILL FORWARD ENTERPRISE</p>
