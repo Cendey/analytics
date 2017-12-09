@@ -42,10 +42,10 @@ import java.util.ResourceBundle;
 import java.util.concurrent.BlockingQueue;
 
 /**
- * <p>Project: KEWILL FORWARD ENTERPRISE</p>
+ * <p>Project: MIT Lib Center</p>
  * <p>File: edu.lab.mit.gui.Controller</p>
- * <p>Copyright: Copyright @2015 Kewill Co., Ltd. All Rights Reserved.</p>
- * <p>Company: Kewill Co., Ltd</p>
+ * <p>Copyright: Copyright @2015  MIT Lib Edu. All Rights Reserved.</p>
+ * <p>Company: MIT Lib Edu</p>
  *
  * @author <chao.deng@kewill.com>
  * @version 1.0
@@ -303,7 +303,7 @@ public class Controller implements Initializable {
         }
     }
 
-    public void analyzeErrorLog() throws Exception {
+    public void analyzeErrorLog() {
         if (!criterionAlready() || !isFileAvailable(sourceErrorLog) || !isFileAvailable(targetErrorLog)) return;
         new Thread(() -> {
             try {

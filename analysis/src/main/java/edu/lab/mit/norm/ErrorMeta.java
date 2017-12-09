@@ -6,7 +6,7 @@ import javafx.beans.property.SimpleStringProperty;
 /**
  * <p>Project: KEWILL FORWARD ENTERPRISE</p>
  * <p>File: edu.lab.mit.norm.ErrorMeta</p>
- * <p>Copyright: Copyright � 2015 Kewill Co., Ltd. All Rights Reserved.</p>
+ * <p>Copyright: Copyright 2015 Kewill Co., Ltd. All Rights Reserved.</p>
  * <p>Company: Kewill Co., Ltd</p>
  *
  * @author <chao.deng@kewill.com>
