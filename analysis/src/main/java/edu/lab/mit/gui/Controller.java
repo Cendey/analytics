@@ -1,6 +1,6 @@
 package edu.lab.mit.gui;
 
-import edu.lab.mit.attributes.Literals;
+import edu.lab.mit.meta.Literals;
 import edu.lab.mit.cell.Handler;
 import edu.lab.mit.norm.Criterion;
 import edu.lab.mit.norm.ErrorMeta;

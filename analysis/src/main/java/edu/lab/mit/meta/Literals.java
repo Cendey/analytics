@@ -1,4 +1,4 @@
-package edu.lab.mit.attributes;
+package edu.lab.mit.meta;
 
 /**
  * <p>Title: MIT Lab Project</p>

@@ -1,6 +1,6 @@
 package edu.lab.mit.norm;
 
-import edu.lab.mit.attributes.Literals;
+import edu.lab.mit.meta.Literals;
 
 import java.io.File;
 import java.io.FileOutputStream;
